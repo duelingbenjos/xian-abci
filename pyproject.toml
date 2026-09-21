@@ -15,7 +15,7 @@ dependencies = [
     "asyncpg>=0.31.0,<0.32",
     "loguru>=0.7.3,<0.8",
     "prometheus-client>=0.25.0,<0.26",
-    "protobuf==7.35.1",
+    "protobuf==7.36.2",
     "pynacl>=1.6.2,<2",
     "xian-tech-accounts>=0.1.3,<0.2",
     "xian-tech-contracting>=1.1.3,<2",
