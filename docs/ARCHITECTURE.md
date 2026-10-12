@@ -25,3 +25,18 @@ Dependency direction:
 - consumes `xian-runtime-types` for shared deterministic values
 - consumes `xian-configs` for canonical contract bundles and network assets
 - is consumed by `xian-cli` and `xian-stack`
+
+## Account Authorization
+
+`src/xian/account_registry.py` owns consensus-backed account records and native
+key transitions. All ABCI admission paths use this state-aware verifier. The
+registry retains the exact sender identity; existing balances, nonce keys, and
+contract context are not rewritten. `_accounts.*` is a reserved, non-contract
+namespace included in the existing state root and exports. No policy entry is
+installed by default.
+
+The [cross-repo protocol](../../xian-meta/docs/ACCOUNT_REGISTRY_PROTOCOL.md)
+defines the explicit wire format, policy, fees, and block ordering. Registry
+transitions execute serially, and later transactions from that sender wait for
+the next committed block. Native cryptographic admission helpers alone are
+stateless and must not be used to authorize registered accounts.

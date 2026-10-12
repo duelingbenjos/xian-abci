@@ -1,6 +1,7 @@
 from loguru import logger
 
 from cometbft.abci.v1beta2.types_pb2 import ResponsePrepareProposal
+from xian.account_registry import registry_for_app
 from xian.app_logging import build_log_fields
 from xian.utils.tx import (
     SequentialNonceTracker,
@@ -11,6 +12,7 @@ from xian.utils.tx import (
 
 async def prepare_proposal(self, req) -> ResponsePrepareProposal:
     nonce_tracker = SequentialNonceTracker(self.nonce_storage.get_nonce)
+    account_registry = registry_for_app(self)
     txs = []
     block_chi_supplied = 0
     block_tx_bytes = 0
@@ -27,6 +29,7 @@ async def prepare_proposal(self, req) -> ResponsePrepareProposal:
                 raw_tx,
                 chain_id=self.chain_id,
                 max_raw_tx_bytes=self.max_tx_bytes,
+                account_registry=account_registry,
             )
             self.tx_fee_policy.validate_tx(tx)
             next_block_chi_supplied = block_chi_supplied + self.tx_fee_policy.tx_chi_supplied(tx)
@@ -35,6 +38,7 @@ async def prepare_proposal(self, req) -> ResponsePrepareProposal:
                 tx,
                 nonce_tracker=nonce_tracker,
             )
+            account_registry.accept(tx)
             block_chi_supplied = next_block_chi_supplied
         except Exception as exc:
             logger.bind(

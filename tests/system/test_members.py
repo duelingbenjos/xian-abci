@@ -838,7 +838,7 @@ class TestMembersContract(unittest.TestCase):
             min_total_bond=100,
         )
 
-        dao_balance_before = self.currency.balances["dao"]
+        dao_balance_before = self.currency.balance_of(address="dao")
         self.assertEqual(self.members.active_validators.get(), ["node1", "node2"])
 
         self.members.propose_vote(
@@ -1262,7 +1262,7 @@ class TestMembersContract(unittest.TestCase):
             signer="delegator1",
             environment={"now": base_time, "block_num": 7},
         )
-        dao_balance_before = self.currency.balances["dao"]
+        dao_balance_before = self.currency.balance_of(address="dao")
 
         result = self.members.apply_evidence_penalty(
             member="node1",
@@ -1321,7 +1321,7 @@ class TestMembersContract(unittest.TestCase):
             signer="delegator1",
             environment={"now": base_time, "block_num": 7},
         )
-        dao_balance_before = self.currency.balances["dao"]
+        dao_balance_before = self.currency.balance_of(address="dao")
 
         result = self.members.apply_evidence_penalty(
             member="node1",

@@ -18,10 +18,12 @@ from xian_accounts import Ed25519Account
 from xian_runtime_types.encoding import encode
 from xian_runtime_types.time import Datetime
 
+from xian.account_registry import RegistryPolicy
 from xian.config_paths import (
     resolve_contracts_dir as resolve_configs_contracts_dir,
 )
 from xian.execution_engine import VmRuntime, build_vm_runtime, execute_vm_contract
+from xian.genesis_migration import strict_json, validate_migration_bundle, verify_migrated_state
 from xian.runtime_features import (
     RuntimeFeatureResolution,
     genesis_runtime_feature_entries,
@@ -72,15 +74,29 @@ def load_contract_bundle_config(
     resolved_contracts_dir = resolve_contracts_dir(contracts_dir)
     config_path = resolved_contracts_dir / f"contracts_{network}.json"
     with open(config_path, "r", encoding="utf-8") as handle:
-        return json.load(handle)
+        return strict_json(handle.read())
 
 
-def _genesis_submission_time() -> Datetime:
-    now = datetime.today()
-    return Datetime(now.year, now.month, now.day, hour=now.hour, minute=now.minute)
+def _genesis_submission_time(value: str | None = None) -> Datetime:
+    if value is None:
+        now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    else:
+        now = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if now.tzinfo is None:
+            raise ValueError("genesis_time must include a timezone")
+        now = now.astimezone(timezone.utc)
+    return Datetime(
+        now.year,
+        now.month,
+        now.day,
+        hour=now.hour,
+        minute=now.minute,
+        second=now.second,
+        microsecond=now.microsecond,
+    )
 
 
-def _stage_native_submission_contract(driver: Driver) -> None:
+def _stage_native_submission_contract(driver: Driver, timestamp: Datetime | None = None) -> None:
     source = BUILTIN_SUBMISSION_SOURCE_PATH.read_text(encoding="utf-8")
     artifacts = build_contract_artifacts(
         module_name="submission",
@@ -92,6 +108,7 @@ def _stage_native_submission_contract(driver: Driver) -> None:
         name="submission",
         source=artifacts["source"],
         vm_ir_json=artifacts["vm_ir_json"],
+        timestamp=timestamp,
     )
 
 
@@ -103,6 +120,7 @@ def _deploy_native_genesis_contract(
     source: str,
     owner: str | None,
     constructor_args: dict[str, Any] | None,
+    submission_time: Datetime | None = None,
 ) -> None:
     output = execute_vm_contract(
         runtime,
@@ -116,7 +134,7 @@ def _deploy_native_genesis_contract(
             "owner": owner,
             "constructor_args": constructor_args or {},
         },
-        environment={"now": _genesis_submission_time()},
+        environment={"now": submission_time or _genesis_submission_time()},
         meter=False,
     )
     if output.status_code != 0:
@@ -156,6 +174,7 @@ def _build_genesis_block(
     storage_home: Path,
     constructor_overrides: dict[str, dict[str, Any]] | None = None,
     runtime_features: dict[str, Any] | None = None,
+    genesis_time: str | None = None,
 ) -> dict[str, Any]:
     driver = Driver(storage_home=storage_home)
     resolved_runtime_features = normalize_runtime_features(runtime_features)
@@ -167,12 +186,23 @@ def _build_genesis_block(
         ),
     )
     runtime = build_vm_runtime()
-    _stage_native_submission_contract(driver)
 
     contract_config = load_contract_bundle_config(
         network,
         contracts_dir=contracts_dir,
     )
+
+    migration = validate_migration_bundle(contract_config, contracts_dir, constructor_overrides)
+    if migration is not None and genesis_time is None:
+        raise ValueError("migration genesis requires an explicit genesis_time")
+    submission_time = _genesis_submission_time(genesis_time)
+    _stage_native_submission_contract(driver, timestamp=submission_time)
+    policy = contract_config.get("account_registry")
+    if policy is not None:
+        parsed_policy = RegistryPolicy.parse(policy)
+        if parsed_policy.enrollment_open:
+            raise ValueError("genesis enrollment must remain disabled until launch checks complete")
+        driver.set("_accounts.policy", policy)
 
     wallet = Ed25519Account(founder_private_key)
     substitutions = {
@@ -212,10 +242,13 @@ def _build_genesis_block(
                 source=code,
                 owner=owner,
                 constructor_args=constructor_args,
+                submission_time=submission_time,
             )
 
     for entry in genesis_runtime_feature_entries(resolved_runtime_features):
         driver.set(entry["key"], entry["value"])
+
+    verify_migrated_state(driver, migration)
 
     genesis_block = {
         "hash": "",
@@ -240,6 +273,8 @@ def _build_genesis_block(
     genesis_block["origin"]["signature"] = wallet.sign_msg(
         hash_state_changes(genesis_block["genesis"])
     )
+    if migration is not None:
+        genesis_block["migration_target_chain_id"] = migration[1]["target_chain_id"]
     return genesis_block
 
 
@@ -251,6 +286,7 @@ def build_genesis_block(
     storage_home: Path | None = None,
     constructor_overrides: dict[str, dict[str, Any]] | None = None,
     runtime_features: dict[str, Any] | None = None,
+    genesis_time: str | None = None,
 ) -> dict[str, Any]:
     resolved_contracts_dir = resolve_contracts_dir(contracts_dir)
 
@@ -262,6 +298,7 @@ def build_genesis_block(
             storage_home=storage_home.resolve(),
             constructor_overrides=constructor_overrides,
             runtime_features=runtime_features,
+            genesis_time=genesis_time,
         )
 
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -272,6 +309,7 @@ def build_genesis_block(
             storage_home=Path(tmp_dir),
             constructor_overrides=constructor_overrides,
             runtime_features=runtime_features,
+            genesis_time=genesis_time,
         )
 
 
@@ -353,6 +391,9 @@ def build_cometbft_genesis(
             datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
         )
 
+    target = abci_genesis.get("migration_target_chain_id")
+    if target is not None and target != chain_id:
+        raise ValueError("genesis chain ID differs from migration target")
     return {
         "genesis_time": resolved_genesis_time,
         "chain_id": chain_id,
@@ -475,6 +516,7 @@ def build_bundle_network_genesis(
         network=network,
         contracts_dir=contracts_dir,
         runtime_features=runtime_features,
+        genesis_time=genesis_time,
     )
     abci_genesis["origin"] = {"sender": "", "signature": ""}
     return build_cometbft_genesis(
@@ -498,6 +540,9 @@ def update_cometbft_genesis(genesis_path: Path, *, abci_genesis: dict[str, Any])
     with open(genesis_path, "r", encoding="utf-8") as handle:
         cometbft_genesis = json.load(handle)
 
+    target = abci_genesis.get("migration_target_chain_id")
+    if target is not None and target != cometbft_genesis.get("chain_id"):
+        raise ValueError("genesis chain ID differs from migration target")
     cometbft_genesis["abci_genesis"] = abci_genesis
     cometbft_genesis["initial_height"] = str(abci_genesis["number"])
     cometbft_genesis["app_hash"] = str(abci_genesis.get("hash", ""))

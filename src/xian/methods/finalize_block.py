@@ -4,6 +4,7 @@ from loguru import logger
 
 from cometbft.abci.v1beta2.types_pb2 import Event, EventAttribute
 from cometbft.abci.v1beta3.types_pb2 import ExecTxResult, ResponseFinalizeBlock
+from xian.account_registry import is_registry_transaction, registry_for_app
 from xian.app_logging import build_log_fields
 from xian.constants import Constants as c
 from xian.fee_policy import TxFeePolicy
@@ -204,6 +205,7 @@ def _initialize_block(self, req):
 def _decode_block_transactions(self, req, *, height: int, block_hash: str):
     decoded_entries = []
     nonce_tracker = SequentialNonceTracker(self.nonce_storage.get_nonce)
+    account_registry = registry_for_app(self)
     block_chi_supplied = 0
     with self.profiler.scope("finalize_decode", block_scoped=True):
         for tx_bytes in req.txs:
@@ -212,6 +214,7 @@ def _decode_block_transactions(self, req, *, height: int, block_hash: str):
                     tx_bytes,
                     chain_id=self.chain_id,
                     max_raw_tx_bytes=self.max_tx_bytes,
+                    account_registry=account_registry,
                 )
             except Exception as e:
                 decoded_entries.append(
@@ -238,6 +241,7 @@ def _decode_block_transactions(self, req, *, height: int, block_hash: str):
                     tx,
                     nonce_tracker=nonce_tracker,
                 )
+                account_registry.accept(tx)
                 block_chi_supplied = next_block_chi_supplied
             except Exception as e:
                 decoded_entries.append(
@@ -298,6 +302,8 @@ def _execute_transactions_in_parallel(
     height: int,
     block_hash: str,
 ):
+    if any(is_registry_transaction(tx) for tx in decoded_txs):
+        return None
     with self.profiler.scope("finalize_parallel", block_scoped=True):
         parallel_execution = self.parallel_block_executor.execute(
             txs=decoded_txs,

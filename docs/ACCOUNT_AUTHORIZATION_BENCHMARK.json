@@ -1,0 +1,354 @@
+{
+  "before_wire_check_reordering": {
+    "created_at": "2026-10-12T11:16:59.213892+00:00",
+    "python": "3.14.8",
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "dependencies": {
+      "pqcrypto": "0.4.0",
+      "PyNaCl": "1.6.2"
+    },
+    "source_sha256": {
+      "/Users/endogen/Projekte/xian/xian-abci/scripts/benchmark_account_authorization.py": "2063d4c3d41a274d7399f9f0b27f37c77ca2f2150247742fda77fd17fadc7aa6",
+      "/Users/endogen/Projekte/xian/xian-abci/src/xian/account_registry.py": "67824ea4fe8e047bfa6e925173ab3238c920a2c3b2d9db4a88fd16823808c293",
+      "/Users/endogen/Projekte/xian/xian-abci/src/xian/utils/tx.py": "2376f45727c1fef740170b6ddc89efe6e361c02b30145fd4e29cae07a00be0be",
+      "/Users/endogen/Projekte/xian/xian-abci/src/xian/utils/encoding.py": "4081057976359ca2ae2b0e1cbf1702300d6114c06e2425895dd9b95c00830a12",
+      "/Users/endogen/Projekte/xian/xian-contracting/packages/xian-accounts/src/xian_accounts/hybrid.py": "748be16eeb1f6e8777c10b583e5ae4d47792da5f46c21d7f851317c51043ec8e"
+    },
+    "scope": "static admission with in-memory read-only state; excludes consensus, LMDB, execution and RPC",
+    "limitations": "serial CPU benchmark; traced memory excludes native allocations; no production capacity claim",
+    "launch_approved": false,
+    "cases": {
+      "valid_legacy": {
+        "accepted": true,
+        "wire_bytes": 776,
+        "iterations": 100,
+        "p50_ms": 0.5672915000000001,
+        "p95_ms": 0.590041,
+        "max_ms": 0.629708,
+        "mean_ms": 0.57099335,
+        "serial_attempts_per_second": 1751.3338815592163,
+        "peak_traced_python_bytes_5_attempts": 4939
+      },
+      "valid_hybrid": {
+        "accepted": true,
+        "wire_bytes": 14266,
+        "iterations": 100,
+        "p50_ms": 1.7035624999999999,
+        "p95_ms": 1.779417,
+        "max_ms": 1.811125,
+        "mean_ms": 1.71419578,
+        "serial_attempts_per_second": 583.3639375777718,
+        "peak_traced_python_bytes_5_attempts": 53474
+      },
+      "valid_max_payload": {
+        "accepted": true,
+        "wire_bytes": 275970,
+        "iterations": 100,
+        "p50_ms": 4.913583,
+        "p95_ms": 5.215042,
+        "max_ms": 6.326458,
+        "mean_ms": 4.96863998,
+        "serial_attempts_per_second": 201.26231806394634,
+        "peak_traced_python_bytes_5_attempts": 1124965
+      },
+      "valid_enroll": {
+        "accepted": true,
+        "wire_bytes": 44238,
+        "iterations": 100,
+        "p50_ms": 3.4382289999999998,
+        "p95_ms": 3.884084,
+        "max_ms": 4.167458,
+        "mean_ms": 3.51688967,
+        "serial_attempts_per_second": 284.3421585073495,
+        "peak_traced_python_bytes_5_attempts": 149711
+      },
+      "closed_enrollment": {
+        "accepted": false,
+        "wire_bytes": 44238,
+        "iterations": 100,
+        "p50_ms": 0.140667,
+        "p95_ms": 0.143417,
+        "max_ms": 0.169584,
+        "mean_ms": 0.14136871,
+        "serial_attempts_per_second": 7073.701104013752,
+        "peak_traced_python_bytes_5_attempts": 149583
+      },
+      "valid_rotate": {
+        "accepted": true,
+        "wire_bytes": 57592,
+        "iterations": 100,
+        "p50_ms": 4.5958545,
+        "p95_ms": 4.752875,
+        "max_ms": 5.004833,
+        "mean_ms": 4.61771165,
+        "serial_attempts_per_second": 216.55748037017423,
+        "peak_traced_python_bytes_5_attempts": 189773
+      },
+      "valid_recover": {
+        "accepted": true,
+        "wire_bytes": 57594,
+        "iterations": 100,
+        "p50_ms": 4.5834165,
+        "p95_ms": 4.713958,
+        "max_ms": 4.791875,
+        "mean_ms": 4.60266836,
+        "serial_attempts_per_second": 217.26527348583508,
+        "peak_traced_python_bytes_5_attempts": 189781
+      },
+      "invalid_ed25519": {
+        "accepted": false,
+        "wire_bytes": 14266,
+        "iterations": 100,
+        "p50_ms": 1.598521,
+        "p95_ms": 1.659959,
+        "max_ms": 1.700834,
+        "mean_ms": 1.60859547,
+        "serial_attempts_per_second": 621.6603357710562,
+        "peak_traced_python_bytes_5_attempts": 53474
+      },
+      "invalid_ml_dsa": {
+        "accepted": false,
+        "wire_bytes": 14266,
+        "iterations": 100,
+        "p50_ms": 1.5937505,
+        "p95_ms": 1.658208,
+        "max_ms": 1.770834,
+        "mean_ms": 1.60417207,
+        "serial_attempts_per_second": 623.3745236569291,
+        "peak_traced_python_bytes_5_attempts": 53474
+      },
+      "payload_limit": {
+        "accepted": false,
+        "wire_bytes": 276436,
+        "iterations": 100,
+        "p50_ms": 2.2287920000000003,
+        "p95_ms": 2.355958,
+        "max_ms": 2.871,
+        "mean_ms": 2.25431796,
+        "serial_attempts_per_second": 443.5931477918049,
+        "peak_traced_python_bytes_5_attempts": 1126887
+      },
+      "wire_limit": {
+        "accepted": false,
+        "wire_bytes": 1062868,
+        "iterations": 100,
+        "p50_ms": 3.494979,
+        "p95_ms": 3.716042,
+        "max_ms": 5.184583,
+        "mean_ms": 3.5479871,
+        "serial_attempts_per_second": 281.8499537385579,
+        "peak_traced_python_bytes_5_attempts": 4370663
+      },
+      "configured_wire_limit": {
+        "accepted": false,
+        "wire_bytes": 4194305,
+        "iterations": 100,
+        "p50_ms": 0.000458,
+        "p95_ms": 0.000541,
+        "max_ms": 0.000583,
+        "mean_ms": 0.00046663,
+        "serial_attempts_per_second": 2143025.5234339843,
+        "peak_traced_python_bytes_5_attempts": 845
+      },
+      "deep_json": {
+        "accepted": false,
+        "wire_bytes": 40000,
+        "iterations": 100,
+        "p50_ms": 0.751709,
+        "p95_ms": 0.775541,
+        "max_ms": 0.797875,
+        "mean_ms": 0.75445658,
+        "serial_attempts_per_second": 1325.4573245288682,
+        "peak_traced_python_bytes_5_attempts": 1010059
+      },
+      "flat_json_allocation": {
+        "accepted": false,
+        "wire_bytes": 4014290,
+        "iterations": 100,
+        "p50_ms": 108.84412499999999,
+        "p95_ms": 113.788,
+        "max_ms": 321.900625,
+        "mean_ms": 111.68357789,
+        "serial_attempts_per_second": 8.95386787290183,
+        "peak_traced_python_bytes_5_attempts": 18684443
+      }
+    }
+  },
+  "after_wire_check_reordering": {
+    "created_at": "2026-10-12T11:17:46.370120+00:00",
+    "python": "3.14.8",
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "dependencies": {
+      "pqcrypto": "0.4.0",
+      "PyNaCl": "1.6.2"
+    },
+    "source_sha256": {
+      "/Users/endogen/Projekte/xian/xian-abci/scripts/benchmark_account_authorization.py": "2063d4c3d41a274d7399f9f0b27f37c77ca2f2150247742fda77fd17fadc7aa6",
+      "/Users/endogen/Projekte/xian/xian-abci/src/xian/account_registry.py": "67824ea4fe8e047bfa6e925173ab3238c920a2c3b2d9db4a88fd16823808c293",
+      "/Users/endogen/Projekte/xian/xian-abci/src/xian/utils/tx.py": "5adf2350913c7b768bb1d93d91fed52be2b5ab7ff85f58f3b116c89529d1f61a",
+      "/Users/endogen/Projekte/xian/xian-abci/src/xian/utils/encoding.py": "2bef6cb49b06e79eeb28b31d8a0ec5f65d6c2177cd5e6acea262942a428d8e7e",
+      "/Users/endogen/Projekte/xian/xian-contracting/packages/xian-accounts/src/xian_accounts/hybrid.py": "748be16eeb1f6e8777c10b583e5ae4d47792da5f46c21d7f851317c51043ec8e"
+    },
+    "scope": "static admission with in-memory read-only state; excludes consensus, LMDB, execution and RPC",
+    "limitations": "serial CPU benchmark; traced memory excludes native allocations; no production capacity claim",
+    "launch_approved": false,
+    "cases": {
+      "valid_legacy": {
+        "accepted": true,
+        "wire_bytes": 776,
+        "iterations": 100,
+        "p50_ms": 0.5866039999999999,
+        "p95_ms": 0.603042,
+        "max_ms": 0.628875,
+        "mean_ms": 0.58867454,
+        "serial_attempts_per_second": 1698.7315265919265,
+        "peak_traced_python_bytes_5_attempts": 4939
+      },
+      "valid_hybrid": {
+        "accepted": true,
+        "wire_bytes": 14266,
+        "iterations": 100,
+        "p50_ms": 1.7883125,
+        "p95_ms": 2.186792,
+        "max_ms": 2.897375,
+        "mean_ms": 1.8518837400000001,
+        "serial_attempts_per_second": 539.9907015761152,
+        "peak_traced_python_bytes_5_attempts": 53474
+      },
+      "valid_max_payload": {
+        "accepted": true,
+        "wire_bytes": 275970,
+        "iterations": 100,
+        "p50_ms": 5.235958999999999,
+        "p95_ms": 6.157792,
+        "max_ms": 7.477375,
+        "mean_ms": 5.3417638,
+        "serial_attempts_per_second": 187.20408416411075,
+        "peak_traced_python_bytes_5_attempts": 1124965
+      },
+      "valid_enroll": {
+        "accepted": true,
+        "wire_bytes": 44238,
+        "iterations": 100,
+        "p50_ms": 3.681417,
+        "p95_ms": 4.242875,
+        "max_ms": 7.339583,
+        "mean_ms": 3.76685956,
+        "serial_attempts_per_second": 265.4731306202454,
+        "peak_traced_python_bytes_5_attempts": 149711
+      },
+      "closed_enrollment": {
+        "accepted": false,
+        "wire_bytes": 44238,
+        "iterations": 100,
+        "p50_ms": 0.151,
+        "p95_ms": 0.15725,
+        "max_ms": 0.22325,
+        "mean_ms": 0.1522929,
+        "serial_attempts_per_second": 6566.29429211736,
+        "peak_traced_python_bytes_5_attempts": 149583
+      },
+      "valid_rotate": {
+        "accepted": true,
+        "wire_bytes": 57592,
+        "iterations": 100,
+        "p50_ms": 4.913937499999999,
+        "p95_ms": 6.001209,
+        "max_ms": 7.288917,
+        "mean_ms": 5.03127666,
+        "serial_attempts_per_second": 198.7567107868006,
+        "peak_traced_python_bytes_5_attempts": 189773
+      },
+      "valid_recover": {
+        "accepted": true,
+        "wire_bytes": 57594,
+        "iterations": 100,
+        "p50_ms": 4.945187499999999,
+        "p95_ms": 5.324292,
+        "max_ms": 5.962667,
+        "mean_ms": 4.97721547,
+        "serial_attempts_per_second": 200.9155532902818,
+        "peak_traced_python_bytes_5_attempts": 189781
+      },
+      "invalid_ed25519": {
+        "accepted": false,
+        "wire_bytes": 14266,
+        "iterations": 100,
+        "p50_ms": 1.7309995,
+        "p95_ms": 1.8045,
+        "max_ms": 1.953167,
+        "mean_ms": 1.73810459,
+        "serial_attempts_per_second": 575.339370112359,
+        "peak_traced_python_bytes_5_attempts": 53474
+      },
+      "invalid_ml_dsa": {
+        "accepted": false,
+        "wire_bytes": 14266,
+        "iterations": 100,
+        "p50_ms": 1.6706455,
+        "p95_ms": 1.89375,
+        "max_ms": 2.032334,
+        "mean_ms": 1.70185044,
+        "serial_attempts_per_second": 587.5956996550178,
+        "peak_traced_python_bytes_5_attempts": 53474
+      },
+      "payload_limit": {
+        "accepted": false,
+        "wire_bytes": 276436,
+        "iterations": 100,
+        "p50_ms": 2.39425,
+        "p95_ms": 2.667,
+        "max_ms": 5.386,
+        "mean_ms": 2.46527461,
+        "serial_attempts_per_second": 405.6343240398684,
+        "peak_traced_python_bytes_5_attempts": 1126887
+      },
+      "wire_limit": {
+        "accepted": false,
+        "wire_bytes": 1062868,
+        "iterations": 100,
+        "p50_ms": 0.967958,
+        "p95_ms": 1.0085,
+        "max_ms": 1.076583,
+        "mean_ms": 0.97586706,
+        "serial_attempts_per_second": 1024.7297413645665,
+        "peak_traced_python_bytes_5_attempts": 2659637
+      },
+      "configured_wire_limit": {
+        "accepted": false,
+        "wire_bytes": 4194305,
+        "iterations": 100,
+        "p50_ms": 0.000459,
+        "p95_ms": 0.000541,
+        "max_ms": 0.000583,
+        "mean_ms": 0.00048322,
+        "serial_attempts_per_second": 2069450.7677662347,
+        "peak_traced_python_bytes_5_attempts": 845
+      },
+      "deep_json": {
+        "accepted": false,
+        "wire_bytes": 40000,
+        "iterations": 100,
+        "p50_ms": 0.7894375,
+        "p95_ms": 0.912209,
+        "max_ms": 1.0535,
+        "mean_ms": 0.80775333,
+        "serial_attempts_per_second": 1238.001705297829,
+        "peak_traced_python_bytes_5_attempts": 1010075
+      },
+      "flat_json_allocation": {
+        "accepted": false,
+        "wire_bytes": 4014290,
+        "iterations": 100,
+        "p50_ms": 5.872958,
+        "p95_ms": 6.687875,
+        "max_ms": 9.208166,
+        "mean_ms": 6.00340039,
+        "serial_attempts_per_second": 166.57226488936547,
+        "peak_traced_python_bytes_5_attempts": 11330760
+      }
+    }
+  }
+}

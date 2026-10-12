@@ -1155,7 +1155,7 @@ class MyTestCase(unittest.TestCase):
         self.currency.approve(amount=200, to="validators", signer="new_node")
         self.validators.bond_self(amount=200, signer="new_node")
 
-        dao_balance_before = self.currency.balances["dao"]
+        dao_balance_before = self.currency.balance_of(address="dao")
         self.vote_slash()
 
         self.assertEqual(self.validators.self_bond["new_node"], 150)
@@ -1204,6 +1204,7 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(self.rewards.S["value"], [0.70, 0, 0, 0.30])
 
     def test_dao_payout(self):
+        self.currency.balances["dao"] = 100000
         self.assertEqual(self.currency.balances["new_node"], 1000000)
         self.vote_dao_payout()
         self.assertEqual(self.validators.votes[1]["yes"], 4)

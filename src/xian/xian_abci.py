@@ -51,6 +51,7 @@ from loguru import logger
 
 from abci.server import ABCIServer
 from abci.utils import get_logger
+from xian.account_registry import AccountRegistry
 from xian.app_logging import (
     build_log_fields,
     configure_logging,
@@ -178,6 +179,10 @@ class Xian:
         self.chain_id = self.genesis.get("chain_id", None)
         if self.chain_id is None:
             raise ValueError("No value set for 'chain_id' in genesis block")
+        if AccountRegistry(self.client.raw_driver, self.chain_id).policy() is not None:
+            from xian_accounts.hybrid import backend
+
+            backend()
         self.profiler = PerfTracker.from_env(
             cometbft_home=constants.COMETBFT_HOME,
             node_name=self.cometbft_config.get("moniker", ""),

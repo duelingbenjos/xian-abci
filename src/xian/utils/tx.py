@@ -4,7 +4,7 @@ from collections.abc import Callable
 from copy import deepcopy
 
 from loguru import logger
-from xian_accounts import verify_message
+from xian_accounts import hybrid, verify_message
 from xian_runtime_types.encoding import convert_dict, encode
 
 from xian.exceptions import TransactionException
@@ -158,6 +158,26 @@ def check_tx_keys(tx):
 
 
 def check_tx_formatting(tx: dict):
+    if (
+        isinstance(tx, dict)
+        and isinstance(tx.get("metadata"), dict)
+        and "tx_format" in tx["metadata"]
+    ):
+        try:
+            hybrid.exact_dict(tx, {"metadata", "payload"})
+            hybrid.exact_dict(tx["metadata"], {"tx_format", "auth"})
+            if tx["metadata"]["tx_format"] != hybrid.TX_FORMAT:
+                raise ValueError("unsupported transaction format")
+            rules = dict(TRANSACTION_PAYLOAD_RULES)
+            rules["contract"] = lambda value: (
+                value == "_accounts" or TRANSACTION_PAYLOAD_RULES["contract"](value)
+            )
+            check_format(tx["payload"], rules)
+            if not isinstance(tx["metadata"]["auth"], dict):
+                raise ValueError("invalid authorization")
+        except ValueError as exc:
+            raise TransactionException(str(exc)) from exc
+        return
     check_tx_keys(tx)
     check_format(tx, TRANSACTION_RULES)
 
@@ -180,7 +200,11 @@ def validate_transaction(
     chain_id: str,
     fee_policy=None,
 ):
-    validate_transaction_static(tx, chain_id=chain_id)
+    from xian.account_registry import AccountRegistry
+
+    validate_transaction_static(
+        tx, chain_id=chain_id, account_registry=AccountRegistry(client.raw_driver, chain_id)
+    )
     validate_transaction_after_static(
         client,
         nonce_storage,
@@ -260,11 +284,16 @@ def decode_and_validate_transaction_static_bytes(
     *,
     chain_id: str,
     max_raw_tx_bytes: int | None = None,
+    account_registry=None,
 ) -> dict:
     if max_raw_tx_bytes is not None and len(raw_tx) > max_raw_tx_bytes:
         raise TransactionException(
             f"Transaction exceeds maximum configured size of {max_raw_tx_bytes} bytes"
         )
+    if account_registry is not None:
+        tx, _ = decode_transaction_bytes(raw_tx, max_account_wire_bytes=hybrid.MAX_WIRE_BYTES)
+        validate_transaction_static(tx, chain_id=chain_id, account_registry=account_registry)
+        return tx
     if _native_decode_and_validate_transaction_static is not None:
         try:
             return _native_decode_and_validate_transaction_static(
@@ -310,12 +339,18 @@ class SequentialNonceTracker:
         self._latest_nonces[sender] = tx_nonce
 
 
-def validate_transaction_static(tx: dict, *, chain_id: str) -> None:
+def validate_transaction_static(tx: dict, *, chain_id: str, account_registry=None) -> None:
     check_tx_formatting(tx)
 
-    sender, signature, payload = unpack_transaction(tx)
-    if not verify(sender, payload, signature):
-        raise TransactionException("Bad signature")
+    if "tx_format" in tx["metadata"]:
+        if account_registry is None:
+            raise TransactionException("Registry transactions require trusted account state")
+    else:
+        sender, signature, payload = unpack_transaction(tx)
+        if not verify(sender, payload, signature):
+            raise TransactionException("Bad signature")
+    if account_registry is not None:
+        account_registry.authorize(tx)
 
     tx_chain_id = tx["payload"].get("chain_id", "")
     if tx_chain_id != chain_id:

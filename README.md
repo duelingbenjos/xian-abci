@@ -47,6 +47,10 @@ uv run xian-bds-spool --help
 uv run xian-parallel-estimator-report --help
 ```
 
+The node installs the hybrid account cryptography backend, but account enrollment
+requires explicit consensus policy and is disabled in default networks. See
+[account authorization](docs/ARCHITECTURE.md#account-authorization).
+
 Optional extras:
 
 - `vm` — enables the `xian_vm_v1` bindings.
@@ -83,7 +87,7 @@ Local `uv` development requires a sibling checkout of
 
 - `src/xian/` — repo-owned node runtime: ABCI handlers, services, utilities,
   and CLI entrypoints.
-  - `methods/` — ABCI request handlers (CheckTx, DeliverTx, Commit, …).
+  - `methods/` — ABCI request handlers (CheckTx, FinalizeBlock, Commit, …).
   - `services/` — background services such as the simulator and BDS support.
   - `cli/` — backend and developer entrypoints (configure-node, export-state,
     BDS helpers, …) wrapping importable helpers.
@@ -140,3 +144,11 @@ Postgres at `postgres://postgres:1234@localhost:5432/xian`.
 - [docs/CHAIN_ASSETS.md](docs/CHAIN_ASSETS.md) — split between this repo and `xian-configs`
 - [docs/TIME_SEMANTICS.md](docs/TIME_SEMANTICS.md) — block-time and timestamp rules
 - [docs/Governance.md](docs/Governance.md) — on-chain governance behavior
+
+## Balance-only genesis migration
+
+`xian.genesis_migration` owns exact balance reconciliation and legacy state-row
+conversion. Operator commands live in `xian-cli`. The genesis builder validates
+input/source/configuration hashes and resulting balances, pins closed enrollment,
+and refuses pending mainnet allocations. See the
+[migration specification](../xian-meta/docs/SNAPSHOT_GENESIS_MIGRATION.md).

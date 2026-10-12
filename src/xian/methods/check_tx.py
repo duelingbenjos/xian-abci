@@ -3,6 +3,7 @@ import hashlib
 from loguru import logger
 
 from cometbft.abci.v1beta3.types_pb2 import ResponseCheckTx
+from xian.account_registry import registry_for_app
 from xian.app_logging import build_log_fields
 from xian.constants import Constants as c
 from xian.utils.tx import (
@@ -35,6 +36,7 @@ async def check_tx(self, raw_tx) -> ResponseCheckTx:
             raw_tx,
             chain_id=self.chain_id,
             max_raw_tx_bytes=self.max_tx_bytes,
+            account_registry=registry_for_app(self),
         )
     except Exception as e:
         return _rejected_check_tx(error=e, raw_tx=raw_tx)

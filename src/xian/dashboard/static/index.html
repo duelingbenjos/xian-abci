@@ -2097,12 +2097,13 @@ async function viewTx(hash){
     html += '</div>';
   }
 
-  /* signature */
-  if(metadata && metadata.signature){
+  /* Ed25519 or hybrid authorization signature */
+  const signature = metadata?.auth?.signature || metadata?.signature;
+  if(signature){
     html += `<div class="card">
       <div class="card-header">Signature</div>
       <div class="card-body">
-        <div class="data-row"><span class="data-key">Signature</span><span class="data-val" style="font-size:.75rem">${escHtml(metadata.signature)}</span></div>
+        <div class="data-row"><span class="data-key">Signature</span><span class="data-val" style="font-size:.75rem">${escHtml(signature)}</span></div>
       </div>
     </div>`;
   }

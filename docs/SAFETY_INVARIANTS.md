@@ -46,3 +46,21 @@ The enforcement surface in this repo includes:
 - `tests/unit/test_processor_shadow.py`
 - `tests/unit/test_vm_observability.py`
 - the ABCI-method integration tests under `tests/abci_methods/`
+
+## Account Registry
+
+- A registry record changes authority, never the sender's state identity.
+- Absent records retain legacy access; invalid/present records cannot fall back
+  to legacy verification, including when activation policy is missing.
+- Enrollment proves existing ownership and possession of both new key pairs.
+- Every proof binds the complete payload, including nonce, chain, fee budget,
+  operation, and candidate keys; role domains are distinct.
+- Proposal and block checks enforce a per-sender barrier after key transitions.
+- Registry operations stage no durable writes outside normal Commit. A failed
+  processor write restores pending state; failed LMDB commits remain retryable.
+- No default genesis or local node option activates hybrid enrollment.
+- Reject oversized account wire before canonicalization and closed enrollment
+  before candidate key parsing; malformed Ed25519 must not invoke ML-DSA.
+- Invalid admission bursts must not reserve nonces or alter funds/authority.
+  See [local security and resource testing](ACCOUNT_SECURITY_REVIEW.md) for
+  evidence and the remaining production load-test gates.

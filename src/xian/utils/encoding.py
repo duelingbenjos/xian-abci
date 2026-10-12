@@ -10,6 +10,8 @@ from xian_runtime_types.decimal import ContractingDecimal
 from xian_runtime_types.encoding import safe_repr
 from xian_runtime_types.time import Datetime
 
+from xian.exceptions import TransactionException
+
 try:
     from xian_fastpath_core import (
         extract_payload_string as _native_extract_payload_string,
@@ -69,7 +71,7 @@ def canonical_json_text(value: Any) -> str:
     )
 
 
-def decode_transaction_bytes(raw) -> Tuple[dict, str]:
+def decode_transaction_bytes(raw, *, max_account_wire_bytes: int | None = None) -> Tuple[dict, str]:
     # Returning a Python dict makes decode-only calls boundary-bound; keep the
     # full decode in Python and use native code only for the payload scanner.
     tx_bytes = raw
@@ -77,6 +79,18 @@ def decode_transaction_bytes(raw) -> Tuple[dict, str]:
     tx_decoded_bytes = bytes.fromhex(tx_hex)
     tx_str = tx_decoded_bytes.decode("utf-8")
     tx_json = json.loads(tx_str)
+
+    # The outer configured limit applies before decoding at the admission
+    # boundary. Once the format is known, enforce its smaller bound before
+    # recursively copying/sorting/serializing attacker-controlled JSON.
+    if (
+        max_account_wire_bytes is not None
+        and len(raw) > max_account_wire_bytes
+        and isinstance(tx_json, dict)
+        and isinstance(tx_json.get("metadata"), dict)
+        and "tx_format" in tx_json["metadata"]
+    ):
+        raise TransactionException("Registry transaction exceeds wire size limit")
 
     canonical_tx_str = canonical_json_text(tx_json)
     if tx_str != canonical_tx_str:

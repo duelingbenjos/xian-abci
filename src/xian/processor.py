@@ -7,6 +7,7 @@ from loguru import logger
 from xian_runtime_types.encoding import convert_dict, safe_repr
 from xian_runtime_types.time import Datetime
 
+from xian.account_registry import execute_registry_transaction, is_registry_transaction
 from xian.app_logging import build_log_fields
 from xian.execution_engine import (
     VmRuntime,
@@ -73,6 +74,20 @@ class TxProcessor:
     ):
         started_ns = time.perf_counter_ns()
         driver = self.client.raw_driver
+        # Native authorization updates must not survive a failed processor result.
+        registry_checkpoint = None
+        if is_registry_transaction(tx):
+            registry_checkpoint = {
+                name: getattr(driver, name).copy()
+                for name in (
+                    "pending_writes",
+                    "pending_reads",
+                    "transaction_reads",
+                    "transaction_read_prefixes",
+                    "transaction_writes",
+                    "log_events",
+                )
+            }
         previous_read_tracking = driver.track_transaction_reads
         driver.set_transaction_read_tracking(track_access)
         environment = self.get_environment(tx=tx)
@@ -134,6 +149,9 @@ class TxProcessor:
                 )
             return response
         except Exception as e:
+            if registry_checkpoint is not None:
+                for name, value in registry_checkpoint.items():
+                    setattr(driver, name, value)
             logger.bind(
                 **build_log_fields(
                     stage="process_tx",
@@ -192,6 +210,10 @@ class TxProcessor:
         started_ns = time.perf_counter_ns()
 
         try:
+            if is_registry_transaction(transaction):
+                return execute_registry_transaction(
+                    self.client.raw_driver, transaction, chi_cost=chi_cost, charge_fees=charge_fees
+                )
             prepare_vm_contract(
                 execution_runtime,
                 self.client.raw_driver,
@@ -472,7 +494,9 @@ class TxProcessor:
     def get_environment(self, tx):
         block_meta = tx["b_meta"]
         nanos = block_meta["nanos"]
-        signature = tx["metadata"]["signature"]
+        signature = tx["metadata"].get("signature")
+        if signature is None:
+            signature = tx["metadata"]["auth"]["signature"]
         chain_id = block_meta["chain_id"]
 
         # Nanos is derived from the block header time consensus agreed on, so
@@ -540,13 +564,6 @@ class TxProcessor:
             if not isinstance(to, str):
                 return None
             writes.add(make_key("approvals", [sender, to]))
-        elif function == "approve_from_authorizer":
-            owner = kwargs.get("owner")
-            spender = kwargs.get("spender")
-            if not isinstance(owner, str) or not isinstance(spender, str):
-                return None
-            reads.add(make_key("metadata", ["permit_authorizer"]))
-            writes.add(make_key("approvals", [owner, spender]))
         elif function == "transfer_from":
             to = kwargs.get("to")
             main_account = kwargs.get("main_account")
@@ -567,8 +584,6 @@ class TxProcessor:
             writes.add(make_key("metadata", [key]))
         elif function == "set_operator":
             writes.add(make_key("metadata", ["operator"]))
-        elif function == "set_permit_authorizer":
-            writes.add(make_key("metadata", ["permit_authorizer"]))
         elif function == "balance_of":
             address = kwargs.get("address")
             if not isinstance(address, str):

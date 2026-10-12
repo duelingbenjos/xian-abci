@@ -13,6 +13,8 @@ subsystems around it.
 - `processor.py`, `execution_engine.py`, `execution_policy.py`,
   `parallel_executor.py`, and `parallel_planner.py`: transaction execution and
   block-processing flow
+- `account_registry.py`: consensus-backed account authorization, enrollment,
+  rotation and recovery
 - `simulator.py`, `simulator_worker.py`, `metrics.py`, and
   `vm_observability.py`: simulation and observability helpers
 - `services/`: BDS and state-sync-related services
@@ -20,7 +22,8 @@ subsystems around it.
 - `dashboard/`: optional HTTP dashboard surface
 - `node_setup.py` and `node_admin.py`: node-home creation and configuration
   helpers
-- `genesis_builder.py` and `state_export.py`: genesis, export, and restore
+- `genesis_builder.py`, `genesis_migration.py` and `state_export.py`: genesis,
+  balance-only import, export, and restore
   helpers
 - `utils/` and `tools/`: shared helpers plus transition-area data such as state
   patches and genesis-upgrade assets

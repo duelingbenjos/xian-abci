@@ -275,3 +275,35 @@ def test_native_fastpath_matches_python_static_validation(
         assert native_result.value == python_result.value, name
     else:
         assert native_result.error == python_result.error, name
+
+
+@pytest.mark.parametrize(
+    "public_key",
+    [
+        "01" + "00" * 31,  # identity
+        "00" * 32,  # order four
+        "ec" + "ff" * 30 + "7f",  # order two
+        "ee" + "ff" * 30 + "7f",  # non-canonical identity
+    ],
+)
+def test_rejects_low_order_signature_forgery(public_key):
+    tx = json.loads(bytes.fromhex(_signed_tx_bytes().decode()).decode())
+    tx["payload"]["sender"] = public_key
+    tx["metadata"]["signature"] = "01" + "00" * 63
+    raw = encode_transaction_bytes(_canonical_json(tx))
+    python_result = _validate(raw, native=False)
+    native_result = _validate(raw, native=True)
+    assert not python_result.accepted
+    assert native_result == python_result
+
+
+def test_rejects_noncanonical_signature_scalar():
+    tx = json.loads(bytes.fromhex(_signed_tx_bytes().decode()).decode())
+    signature = bytes.fromhex(tx["metadata"]["signature"])
+    order = 2**252 + 27742317777372353535851937790883648493
+    scalar = int.from_bytes(signature[32:], "little") + order
+    tx["metadata"]["signature"] = (signature[:32] + scalar.to_bytes(32, "little")).hex()
+    raw = encode_transaction_bytes(_canonical_json(tx))
+    python_result = _validate(raw, native=False)
+    assert not python_result.accepted
+    assert _validate(raw, native=True) == python_result

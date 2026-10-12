@@ -1146,6 +1146,10 @@ async def query(self, req) -> ResponseQuery:
     try:
         outcome = await _execute_query(ctx)
         value, type_of_data = _encode_query_value(outcome.result)
+        # Registry clients distinguish an explicitly absent record from malformed
+        # RPC responses. Empty protobuf bytes become JSON null in CometBFT.
+        if ctx.route == "get" and ctx.key.startswith("_accounts.") and outcome.result is None:
+            value = b"\x00"
     except UnknownQueryPath as err:
         error = str(err)
         logger.error(error)

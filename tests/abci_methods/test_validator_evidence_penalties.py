@@ -120,7 +120,7 @@ class ValidatorEvidencePenaltyTests(unittest.IsolatedAsyncioTestCase):
     ):
         self.driver.set(f"validators.self_bond:{NODE_1}", 200)
         self.driver.set("currency.balances:validators", 200)
-        dao_balance_before = self.driver.get("currency.balances:dao")
+        dao_balance_before = self.driver.get("currency.balances:dao") or 0
 
         before = await self.finalize_block(1)
         after = await self.finalize_block(
@@ -224,7 +224,7 @@ class ValidatorEvidencePenaltyTests(unittest.IsolatedAsyncioTestCase):
             },
         )
         self.driver.set("currency.balances:validators", 40)
-        dao_balance_before = self.driver.get("currency.balances:dao")
+        dao_balance_before = self.driver.get("currency.balances:dao") or 0
 
         before = await self.finalize_block(9)
         after = await self.finalize_block(

@@ -17,6 +17,8 @@ importable runtime code.
 - `benchmark_shielded_chi.py`: manual shielded-fee benchmark harness for the
   shielded note-token path
 - `benchmark_state_root.py`: manual state-root performance benchmark
+- `benchmark_account_authorization.py`: offline hybrid/legacy admission and
+  malformed-input CPU/allocation benchmark; see `docs/ACCOUNT_SECURITY_REVIEW.md`
 
 ## Notes
 
