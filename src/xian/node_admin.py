@@ -193,14 +193,34 @@ def resolve_p2p_seeds(
     return resolved
 
 
+SNAPSHOT_RESTORED_DIRECTORIES = ("data", "xian")
+PRIV_VALIDATOR_STATE_PATH = Path("data") / "priv_validator_state.json"
+
+
+def _snapshot_member_is_restored(name: str) -> bool:
+    relative = Path(name)
+    parts = [part for part in relative.parts if part != "."]
+    if not parts or parts[0] not in SNAPSHOT_RESTORED_DIRECTORIES:
+        return False
+    # The signing high-water mark belongs to this node's validator key, never
+    # to the archive: restoring an older one would allow double-signing.
+    return Path(*parts) != PRIV_VALIDATOR_STATE_PATH
+
+
 def _safe_extract_tar_archive(archive_path: Path, target_path: Path) -> None:
     target_root = target_path.resolve()
     with tarfile.open(archive_path) as archive:
+        members = []
         for member in archive.getmembers():
             member_path = (target_root / member.name).resolve()
             if not member_path.is_relative_to(target_root):
                 raise ValueError(f"snapshot archive contains invalid path: {member.name}")
-        archive.extractall(path=target_root, filter="data")
+            # Only application data is restored. Keys and config (for example
+            # config/priv_validator_key.json or config/node_key.json) stay as
+            # they are on this node.
+            if _snapshot_member_is_restored(member.name):
+                members.append(member)
+        archive.extractall(path=target_root, members=members, filter="data")
 
 
 def _download_snapshot_archive(snapshot_url: str, target_path: Path) -> Path:
@@ -368,11 +388,19 @@ def apply_snapshot_archive(
                     f"expected {effective_sha256}, got {actual_sha256}"
                 )
 
-        for directory in (home / "data", home / "xian"):
+        validator_state_path = home / PRIV_VALIDATOR_STATE_PATH
+        validator_state = (
+            validator_state_path.read_bytes() if validator_state_path.is_file() else None
+        )
+
+        for directory in (home / name for name in SNAPSHOT_RESTORED_DIRECTORIES):
             if directory.exists():
                 shutil.rmtree(directory)
 
         _safe_extract_tar_archive(archive_path, home)
+        if validator_state is not None:
+            validator_state_path.parent.mkdir(parents=True, exist_ok=True)
+            validator_state_path.write_bytes(validator_state)
         return archive_path.name
 
 

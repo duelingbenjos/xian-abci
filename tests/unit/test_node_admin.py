@@ -223,6 +223,51 @@ class NodeAdminTests(unittest.TestCase):
             self.assertEqual(archive_path, "snapshot.tar.gz")
             self.assertTrue((home / "data" / "new.txt").exists())
 
+    def test_apply_snapshot_archive_restores_only_application_data(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            home = Path(tmp_dir)
+            (home / "config").mkdir()
+            (home / "config" / "priv_validator_key.json").write_text("local key")
+            (home / "config" / "node_key.json").write_text("local node key")
+            (home / "data").mkdir()
+            (home / "data" / "priv_validator_state.json").write_text("local height")
+
+            archive_stream = io.BytesIO()
+            with tarfile.open(fileobj=archive_stream, mode="w:gz") as archive:
+                for name, payload in (
+                    ("./data/blockstore.db", b"blocks"),
+                    ("xian/state.db", b"state"),
+                    ("data/priv_validator_state.json", b"archive height"),
+                    ("config/priv_validator_key.json", b"archive key"),
+                    ("config/node_key.json", b"archive node key"),
+                    ("config/config.toml", b"archive config"),
+                ):
+                    info = tarfile.TarInfo(name)
+                    info.size = len(payload)
+                    archive.addfile(info, io.BytesIO(payload))
+            archive_bytes = archive_stream.getvalue()
+
+            with patch(
+                "xian.node_admin._download_binary_url",
+                return_value=archive_bytes,
+            ):
+                apply_snapshot_archive(
+                    "https://example.invalid/snapshot.tar.gz",
+                    home,
+                    expected_sha256=hashlib.sha256(archive_bytes).hexdigest(),
+                )
+
+            self.assertEqual((home / "data" / "blockstore.db").read_text(), "blocks")
+            self.assertEqual((home / "xian" / "state.db").read_text(), "state")
+            self.assertEqual(
+                (home / "data" / "priv_validator_state.json").read_text(), "local height"
+            )
+            self.assertEqual(
+                (home / "config" / "priv_validator_key.json").read_text(), "local key"
+            )
+            self.assertEqual((home / "config" / "node_key.json").read_text(), "local node key")
+            self.assertFalse((home / "config" / "config.toml").exists())
+
     def test_apply_snapshot_archive_rejects_wrong_sha256(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             home = Path(tmp_dir)

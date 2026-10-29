@@ -17,6 +17,12 @@ It restores a `.tar` or `.tar.gz` archive into the node home by replacing:
 - `data/`
 - `xian/`
 
+Only archive members under `data/` and `xian/` are restored. Anything else in
+the archive (for example `config/priv_validator_key.json`, `config/node_key.json`
+or `config/config.toml`) is ignored, and the node keeps its existing
+`data/priv_validator_state.json`, so a snapshot can never replace the node's
+keys or rewind its signing high-water mark.
+
 This is useful when you already have a prepared node-home archive and want to
 bootstrap a node directly from that archive.
 
