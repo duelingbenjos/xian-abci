@@ -80,7 +80,7 @@ def _genesis_submission_time() -> Datetime:
     return Datetime(now.year, now.month, now.day, hour=now.hour, minute=now.minute)
 
 
-def _stage_native_submission_contract(driver: Driver) -> None:
+def _stage_native_submission_contract(driver: Driver, *, submission_time: Datetime) -> None:
     source = BUILTIN_SUBMISSION_SOURCE_PATH.read_text(encoding="utf-8")
     artifacts = build_contract_artifacts(
         module_name="submission",
@@ -92,6 +92,7 @@ def _stage_native_submission_contract(driver: Driver) -> None:
         name="submission",
         source=artifacts["source"],
         vm_ir_json=artifacts["vm_ir_json"],
+        timestamp=submission_time,
     )
 
 
@@ -103,6 +104,7 @@ def _deploy_native_genesis_contract(
     source: str,
     owner: str | None,
     constructor_args: dict[str, Any] | None,
+    submission_time: Datetime | None = None,
 ) -> None:
     output = execute_vm_contract(
         runtime,
@@ -116,7 +118,9 @@ def _deploy_native_genesis_contract(
             "owner": owner,
             "constructor_args": constructor_args or {},
         },
-        environment={"now": _genesis_submission_time()},
+        environment={
+            "now": submission_time if submission_time is not None else _genesis_submission_time()
+        },
         meter=False,
     )
     if output.status_code != 0:
@@ -148,16 +152,21 @@ def render_template_values(value: Any, substitutions: dict[str, str]) -> Any:
     return value
 
 
-def _build_genesis_block(
+def deploy_bundle_contracts(
+    driver: Driver,
     *,
     founder_private_key: str,
     network: str,
     contracts_dir: Path,
-    storage_home: Path,
     constructor_overrides: dict[str, dict[str, Any]] | None = None,
     runtime_features: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    driver = Driver(storage_home=storage_home)
+    submission_time: Datetime | None = None,
+) -> None:
+    """Stage submission and deploy a network bundle's contracts into ``driver``.
+
+    The writes stay pending in the driver so callers can layer further state
+    on top before ``finalize_genesis_block`` hashes and signs the result.
+    """
     resolved_runtime_features = normalize_runtime_features(runtime_features)
     install_driver_runtime_features(
         driver,
@@ -167,7 +176,9 @@ def _build_genesis_block(
         ),
     )
     runtime = build_vm_runtime()
-    _stage_native_submission_contract(driver)
+    if submission_time is None:
+        submission_time = _genesis_submission_time()
+    _stage_native_submission_contract(driver, submission_time=submission_time)
 
     contract_config = load_contract_bundle_config(
         network,
@@ -212,14 +223,23 @@ def _build_genesis_block(
                 source=code,
                 owner=owner,
                 constructor_args=constructor_args,
+                submission_time=submission_time,
             )
 
     for entry in genesis_runtime_feature_entries(resolved_runtime_features):
         driver.set(entry["key"], entry["value"])
 
+
+def finalize_genesis_block(
+    driver: Driver,
+    *,
+    founder_private_key: str | None,
+    number: int | str = "0",
+) -> dict[str, Any]:
+    """Commit the driver's pending writes and render them as a signed genesis block."""
     genesis_block = {
         "hash": "",
-        "number": "0",
+        "number": str(number),
         "genesis": [],
         "origin": {
             "signature": "",
@@ -236,11 +256,34 @@ def _build_genesis_block(
         key=lambda item: item["key"],
     )
     genesis_block["hash"] = StateRootCache.from_driver(driver).root_hash.hex()
-    genesis_block["origin"]["sender"] = wallet.public_key
-    genesis_block["origin"]["signature"] = wallet.sign_msg(
-        hash_state_changes(genesis_block["genesis"])
-    )
+    if founder_private_key:
+        wallet = Ed25519Account(founder_private_key)
+        genesis_block["origin"]["sender"] = wallet.public_key
+        genesis_block["origin"]["signature"] = wallet.sign_msg(
+            hash_state_changes(genesis_block["genesis"])
+        )
     return genesis_block
+
+
+def _build_genesis_block(
+    *,
+    founder_private_key: str,
+    network: str,
+    contracts_dir: Path,
+    storage_home: Path,
+    constructor_overrides: dict[str, dict[str, Any]] | None = None,
+    runtime_features: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    driver = Driver(storage_home=storage_home)
+    deploy_bundle_contracts(
+        driver,
+        founder_private_key=founder_private_key,
+        network=network,
+        contracts_dir=contracts_dir,
+        constructor_overrides=constructor_overrides,
+        runtime_features=runtime_features,
+    )
+    return finalize_genesis_block(driver, founder_private_key=founder_private_key)
 
 
 def build_genesis_block(
