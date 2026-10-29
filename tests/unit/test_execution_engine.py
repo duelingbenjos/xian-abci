@@ -461,7 +461,7 @@ class ExecutionEngineRuntimeTests(unittest.TestCase):
         driver.set_contract_from_source(
             "token_factory",
             token_factory_source,
-            owner="sys",
+            owner=None,
             developer="sys",
             deployer="sys",
             initiator="sys",
