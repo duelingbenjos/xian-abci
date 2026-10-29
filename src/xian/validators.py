@@ -1,7 +1,10 @@
 import logging
+import re
 
 from cometbft.abci.v1beta1.types_pb2 import ValidatorUpdate
 from cometbft.crypto.v1.keys_pb2 import PublicKey
+
+ED25519_PUBLIC_KEY_HEX = re.compile(r"[0-9a-f]{64}")
 
 
 class ValidatorHandler:
@@ -15,6 +18,12 @@ class ValidatorHandler:
         validators = read("validators.active_validators") or []
         desired = {}
         for validator in validators:
+            # Validator entries come from contract state. Anything that is not
+            # a 32-byte ed25519 key can't be sent to CometBFT and must never be
+            # able to fail FinalizeBlock, so it is skipped.
+            if not isinstance(validator, str) or not ED25519_PUBLIC_KEY_HEX.fullmatch(validator):
+                logging.warning(f"Ignoring invalid validator key in state: {validator!r}")
+                continue
             power = read(f"validators.powers:{validator}")
             if power is None:
                 power = self.DEFAULT_VALIDATOR_POWER

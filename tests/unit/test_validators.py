@@ -104,3 +104,22 @@ class ValidatorHandlerTests(unittest.TestCase):
 
         self.assertEqual(len(updates), 1)
         self.assertEqual(updates[0].power, 0)
+
+    def test_build_validator_updates_skips_invalid_validator_keys(self):
+        validator = "11" * 32
+        handler = ValidatorHandler(
+            _FakeApp(
+                current_values={
+                    "validators.active_validators": [
+                        validator,
+                        "con_some_contract",
+                        "AB" * 32,
+                        "11" * 31,
+                        7,
+                    ],
+                },
+                committed_values={"validators.active_validators": [validator]},
+            )
+        )
+
+        self.assertEqual(handler.build_validator_updates(height=10), [])
