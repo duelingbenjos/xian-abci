@@ -45,6 +45,13 @@ class TxFeePolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(TransactionException, "Block chi_supplied exceeds"):
             policy.validate_block_total(21)
 
+    def test_metered_policies_reject_zero_chi_supplied(self):
+        for policy in (TxFeePolicy.paid_metered(), TxFeePolicy.free_metered()):
+            policy.validate_tx(_tx(1))
+            for chi_supplied in (0, None):
+                with self.assertRaisesRegex(TransactionException, "greater than zero"):
+                    policy.validate_tx(_tx(chi_supplied))
+
     def test_system_policy_is_unmetered(self):
         policy = TxFeePolicy.system_unmetered()
 

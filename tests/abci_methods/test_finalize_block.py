@@ -61,7 +61,7 @@ class TestFinalizeBlock(unittest.IsolatedAsyncioTestCase):
         with (
             patch(
                 "xian.methods.finalize_block.decode_and_validate_transaction_static_bytes",
-                return_value={"payload": {}},
+                return_value={"payload": {"chi_supplied": 100}},
             ),
             patch("xian.methods.finalize_block.validate_consensus_transaction_after_static"),
             patch.object(
@@ -106,7 +106,7 @@ class TestFinalizeBlock(unittest.IsolatedAsyncioTestCase):
         with (
             patch(
                 "xian.methods.finalize_block.decode_and_validate_transaction_static_bytes",
-                return_value={"payload": {}},
+                return_value={"payload": {"chi_supplied": 100}},
             ),
             patch("xian.methods.finalize_block.validate_consensus_transaction_after_static"),
             patch.object(
@@ -131,6 +131,7 @@ class TestFinalizeBlock(unittest.IsolatedAsyncioTestCase):
                 "nonce": 0,
                 "contract": "currency",
                 "function": "transfer",
+                "chi_supplied": 100,
                 "kwargs": {},
             }
         }
@@ -186,7 +187,7 @@ class TestFinalizeBlock(unittest.IsolatedAsyncioTestCase):
         with (
             patch(
                 "xian.methods.finalize_block.decode_and_validate_transaction_static_bytes",
-                return_value={"payload": {}},
+                return_value={"payload": {"chi_supplied": 100}},
             ),
             patch("xian.methods.finalize_block.validate_consensus_transaction_after_static"),
             patch.object(
@@ -222,6 +223,7 @@ class TestFinalizeBlock(unittest.IsolatedAsyncioTestCase):
                         "nonce": 1,
                         "contract": "currency",
                         "function": "transfer",
+                        "chi_supplied": 100,
                     },
                     "metadata": {"signature": "sig"},
                 },
@@ -273,6 +275,7 @@ class TestFinalizeBlock(unittest.IsolatedAsyncioTestCase):
                             "nonce": 1,
                             "contract": "currency",
                             "function": "transfer",
+                            "chi_supplied": 100,
                         },
                         "metadata": {"signature": "sig"},
                     },
@@ -323,6 +326,7 @@ class TestFinalizeBlock(unittest.IsolatedAsyncioTestCase):
                         "nonce": 1,
                         "contract": "currency",
                         "function": "transfer",
+                        "chi_supplied": 100,
                     },
                     "metadata": {"signature": "sig"},
                 },
@@ -365,6 +369,7 @@ class TestFinalizeBlock(unittest.IsolatedAsyncioTestCase):
                 "sender": "alice",
                 "contract": "con_shielded_note_token",
                 "function": "deposit_shielded",
+                "chi_supplied": 100,
                 "kwargs": {
                     "amount": 7,
                     "old_root": "0x" + "11" * 32,
@@ -434,6 +439,7 @@ class TestFinalizeBlock(unittest.IsolatedAsyncioTestCase):
                         "nonce": 1,
                         "contract": "currency",
                         "function": "transfer",
+                        "chi_supplied": 100,
                     },
                     "metadata": {"signature": "sig"},
                 },
@@ -479,6 +485,7 @@ class TestFinalizeBlock(unittest.IsolatedAsyncioTestCase):
                         "nonce": 1,
                         "contract": "currency",
                         "function": "transfer",
+                        "chi_supplied": 100,
                     },
                     "metadata": {"signature": "sig"},
                 },
