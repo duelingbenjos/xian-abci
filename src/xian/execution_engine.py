@@ -252,14 +252,41 @@ def execute_vm_contract(
             contract_costs={},
         )
 
+    status_code = int(output.status_code)
+    result = output.result
+    writes = dict(output.writes)
+    events = list(output.events)
+    if status_code == 0 and _has_non_string_dict_key((result, writes, events)):
+        # The ABCI result encoding and the state root only accept string
+        # dict keys, so a value the contract produced with any other key
+        # must fail the transaction here instead of failing the block.
+        status_code = 1
+        result = ValueError("Non-string key types not allowed.")
+        writes = {}
+        events = []
+
     return VmExecutionResult(
-        status_code=int(output.status_code),
-        result=output.result,
-        writes=dict(output.writes),
-        events=list(output.events),
+        status_code=status_code,
+        result=result,
+        writes=writes,
+        events=events,
         chi_used=int(getattr(output, "chi_used", 0)),
         contract_costs=dict(getattr(output, "contract_costs", {}) or {}),
     )
+
+
+def _has_non_string_dict_key(value: Any) -> bool:
+    pending = [value]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, dict):
+            for key, nested in item.items():
+                if not isinstance(key, str):
+                    return True
+                pending.append(nested)
+        elif isinstance(item, (list, tuple, set, frozenset)):
+            pending.extend(item)
+    return False
 
 
 def execute_vm_transaction(

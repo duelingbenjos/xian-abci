@@ -27,7 +27,7 @@ from xian.execution_engine import (
 )
 from xian.fee_policy import TxFeePolicy
 from xian.processor import TxProcessor
-from xian.utils.encoding import normalize_for_abci_json, stringify_decimals
+from xian.utils.encoding import encode_abci_json, normalize_for_abci_json, stringify_decimals
 
 
 def augment_execution_output_with_driver_state(
@@ -1427,6 +1427,95 @@ class ExecutionEngineRuntimeTests(unittest.TestCase):
         self.assertEqual(str(output.result), "boom")
         self.assertEqual(output.writes, {})
         self.assertEqual(output.events, [])
+
+    def test_execute_vm_contract_fails_outputs_with_non_string_dict_keys(self):
+        runtime = types.SimpleNamespace(mode="xian_vm_v1")
+        driver = mock.Mock()
+        driver.get_owner.return_value = None
+        outputs = [
+            {"result": {1: 2}, "writes": {}, "events": []},
+            {"result": None, "writes": {"con_demo.v": [{"a": {5: 1}}]}, "events": []},
+            {"result": None, "writes": {}, "events": [{"data": {(1, 2): "x"}}]},
+        ]
+
+        for fields in outputs:
+            fake_bindings = types.SimpleNamespace(
+                execute_contract=mock.Mock(
+                    return_value=types.SimpleNamespace(
+                        status_code=0, chi_used=7, contract_costs={}, **fields
+                    )
+                )
+            )
+            with mock.patch(
+                "xian.execution_engine._load_vm_runtime_bindings",
+                return_value=fake_bindings,
+            ):
+                output = execute_vm_contract(
+                    runtime,
+                    driver,
+                    sender="alice",
+                    contract_name="con_demo",
+                    function_name="f",
+                    kwargs={},
+                    environment={},
+                )
+
+            self.assertEqual(output.status_code, 1)
+            self.assertEqual(str(output.result), "Non-string key types not allowed.")
+            self.assertEqual(output.writes, {})
+            self.assertEqual(output.events, [])
+            self.assertEqual(output.chi_used, 7)
+
+    def test_execute_native_non_string_dict_key_fails_the_transaction(self):
+        source = (
+            "v = Variable()\n"
+            "h = Hash()\n\n"
+            "@export\n"
+            "def store():\n"
+            "    v.set({1: 2})\n\n"
+            "@export\n"
+            "def store_nested():\n"
+            "    h['k'] = [{'a': {5: 1}}]\n\n"
+            "@export\n"
+            "def give():\n"
+            "    return {1: 2}\n"
+        )
+        client = ContractingClient(environment={"chain_id": "test-chain"})
+        client.flush()
+        try:
+            driver = client.raw_driver
+            driver.set("currency.balances:sys", 100_000_000)
+            driver.commit()
+            client.submit(source, name="con_int_keys", owner="sys")
+            driver.commit()
+
+            runtime = build_vm_runtime()
+            for function_name in ("store", "store_nested", "give"):
+                outcome = execute_vm_transaction(
+                    runtime,
+                    driver,
+                    sender="sys",
+                    contract_name="con_int_keys",
+                    function_name=function_name,
+                    kwargs={},
+                    environment={
+                        "now": Datetime(2026, 4, 13, 1, 0),
+                        "block_num": 1,
+                        "block_hash": "block-1",
+                        "chain_id": "test-chain",
+                    },
+                    chi_budget=2_000,
+                    chi_cost=20,
+                    meter=True,
+                )
+                self.assertEqual(outcome.output.status_code, 1, function_name)
+                self.assertFalse(
+                    any(key.startswith("con_int_keys.") for key in outcome.writes),
+                    function_name,
+                )
+                encode_abci_json({"result": outcome.output.result, "writes": outcome.writes})
+        finally:
+            client.flush()
 
     def test_execute_vm_contract_tolerates_missing_get_owner(self):
         runtime = types.SimpleNamespace(mode="xian_vm_v1")
