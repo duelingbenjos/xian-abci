@@ -21,6 +21,8 @@
   CometBFT home and applying snapshots.
 - `src/xian/genesis_builder.py`: importable genesis-building helpers.
 - `src/xian/state_export.py`: importable state-export helpers.
+- `src/xian/legacy_genesis.py`, `src/xian/legacy_source.py`: genesis from a
+  legacy (pre-VM) chain export; see `docs/LEGACY_MIGRATION.md`.
 - `src/xian/tools/`: state-patch and one-off upgrade data, not the main command
   surface.
 - `tests/`: unit, integration, system, governance, tools, and ABCI-method coverage.

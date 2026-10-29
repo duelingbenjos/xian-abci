@@ -40,6 +40,7 @@ uv run xian-abci --help
 uv run xian-dashboard --help
 uv run xian-configure-node --help
 uv run xian-export-state --help
+uv run xian-legacy-genesis --help
 uv run xian-state-snapshot --help
 uv run xian-bds-reindex --help
 uv run xian-bds-snapshot --help
@@ -140,3 +141,4 @@ Postgres at `postgres://postgres:1234@localhost:5432/xian`.
 - [docs/CHAIN_ASSETS.md](docs/CHAIN_ASSETS.md) — split between this repo and `xian-configs`
 - [docs/TIME_SEMANTICS.md](docs/TIME_SEMANTICS.md) — block-time and timestamp rules
 - [docs/Governance.md](docs/Governance.md) — on-chain governance behavior
+- [docs/LEGACY_MIGRATION.md](docs/LEGACY_MIGRATION.md) — genesis from a legacy chain export

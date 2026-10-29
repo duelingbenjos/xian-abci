@@ -16,6 +16,8 @@ planning documents for `xian-abci`.
   assets and fixtures
 - [`Governance.md`](Governance.md): governance-specific runtime integration
   notes
+- [`LEGACY_MIGRATION.md`](LEGACY_MIGRATION.md): building a genesis from a
+  legacy chain state export
 - [`SAFETY_INVARIANTS.md`](SAFETY_INVARIANTS.md): release-blocking execution
   and replay properties
 - [`SNAPSHOTS_AND_PRUNING.md`](SNAPSHOTS_AND_PRUNING.md): snapshot, restore,
