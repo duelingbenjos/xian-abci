@@ -282,6 +282,23 @@ def build_verification_request(driver, tx: dict) -> dict[str, Any] | None:
     return None
 
 
+def _warm_verified_proofs(requests: list[dict]) -> list[bool]:
+    # Preverification only warms a cache, so it must never be able to fail a
+    # block. Requests come from transaction kwargs; a request the bridge
+    # rejects is counted as unverified and execution verifies it normally.
+    try:
+        return list(zk_bridge.warm_verified_proofs(requests))
+    except Exception:
+        pass
+    results = []
+    for request in requests:
+        try:
+            results.extend(zk_bridge.warm_verified_proofs([request]))
+        except Exception:
+            results.append(False)
+    return results
+
+
 def warm_shielded_proof_cache(
     *,
     driver,
@@ -305,7 +322,7 @@ def warm_shielded_proof_cache(
     previous_driver = rt.env.get("__Driver")
     rt.env["__Driver"] = driver
     try:
-        results = zk_bridge.warm_verified_proofs(requests)
+        results = _warm_verified_proofs(requests)
     finally:
         if previous_driver is None:
             rt.env.pop("__Driver", None)

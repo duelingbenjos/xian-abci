@@ -132,6 +132,40 @@ def test_warm_shielded_proof_cache_skips_malformed_candidates():
     warm_verified_proofs.assert_not_called()
 
 
+def test_warm_shielded_proof_cache_never_raises_on_rejected_requests():
+    good = {"vk_id": "demo", "proof_hex": "0xabcd", "public_inputs": []}
+    bad = {"vk_id": "demo", "proof_hex": "0xzz", "public_inputs": []}
+
+    def warm(requests):
+        if any(request is bad for request in requests):
+            raise AssertionError("invalid proof_hex")
+        return [True for _ in requests]
+
+    with (
+        patch(
+            "xian.shielded_preverify.zk_bridge.is_available", return_value=True
+        ),
+        patch(
+            "xian.shielded_preverify.build_verification_request",
+            side_effect=[good, bad, good],
+        ),
+        patch(
+            "xian.shielded_preverify.zk_bridge.warm_verified_proofs",
+            side_effect=warm,
+        ),
+    ):
+        stats = warm_shielded_proof_cache(
+            driver=object(),
+            txs=[{"payload": {}}, {"payload": {}}, {"payload": {}}],
+        )
+
+    assert stats == ShieldedPreverifyStats(
+        candidate_count=3,
+        verified_count=2,
+        failed_count=1,
+    )
+
+
 def _tx(function, kwargs, *, contract="con_token", sender="sender", chain_id="xian-test"):
     return {
         "payload": {
